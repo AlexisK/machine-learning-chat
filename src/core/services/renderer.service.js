@@ -11,21 +11,39 @@ function RendererService() {
 
     self.process = function (target) {
         Array.prototype.forEach.call(target.querySelectorAll('[data-processors]'), node => {
-            node._processed       = node._processed || {};
-            node._processorParams = node._processorParams || {};
-            var nodeProcessors    = node.getAttribute('data-processors').split(/,\s*/).map(k => processorByName[k]);
+            node._processed          = node._processed || {};
+            node._processorInstances = node._processorInstances || {};
+            node._processorParams    = node._processorParams || {};
+            var nodeProcessors       = node.getAttribute('data-processors').split(/,\s*/).map(k => processorByName[k]);
+
             nodeProcessors.forEach(processor => {
                 var params = node.getAttribute('data-processor-' + processor.name);
                 if ( params ) { params = JSON.parse(params); }
                 node._processorParams[processor.name] = params;
+                let instance = self._getProcessorInstance(processor, node);
 
                 if ( !node._processed[processor.name] ) {
-                    processor.init(processor, node, params);
+                    processor.preInit(instance, params);
+                    processor.init(instance, params);
                     node._processed[processor.name] = true;
                 }
-                processor.process(processor, node, params); // This one should work on dom refresh - but I don't have any right now
+                processor.process(instance, params); // This one should work on dom refresh - but I don't have any right now
             });
         });
+    };
+
+    self._getProcessorInstance = function(processor, node) {
+        if ( node._processorInstances[processor.name] ) {
+            return node._processorInstances[processor.name];
+        }
+        var instance = node._processorInstances[processor.name] = {
+            node: node,
+            processor: processor
+        };
+        processor._class.scopedMethods.forEach(function (methodName) {
+            instance[methodName] = processor[methodName].bind(instance);
+        });
+        return instance;
     };
 
     self.clear = function (target) {
