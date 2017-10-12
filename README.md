@@ -1,4 +1,4 @@
-# AlexisK starter-basic
+# AlexisK machine-learning chat
 
 Prerequisites:
 * nodejs (tested on 7.9.0)
